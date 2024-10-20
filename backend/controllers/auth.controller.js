@@ -16,7 +16,7 @@ const generateTokens = (userId) => {
 };
 
 const storeRefreshToken = async (userId, refreshToken) => {
-	await redis.set(`refresh_token:${userId}`, refreshToken, "EX", 7 * 24 * 60 * 60 * 1000); // 7days
+	await redis.set(`refresh_token:${userId}`, refreshToken, "EX", 7 * 24 * 60 * 60); // 7days
 };
 
 const setCookies = (res, accessToken, refreshToken) => {
@@ -24,7 +24,7 @@ const setCookies = (res, accessToken, refreshToken) => {
 		httpOnly: true, // prevent XSS attacks, cross site scripting attack
 		secure: process.env.NODE_ENV === "production",
 		sameSite: "strict", // prevents CSRF attack, cross-site request forgery attack
-		maxAge: 15* 60 * 60 * 1000, // 15 minutes
+		maxAge: 15 * 60 * 1000, // 15 minutes
 	});
 	res.cookie("refreshToken", refreshToken, {
 		httpOnly: true, // prevent XSS attacks, cross site scripting attack
@@ -62,26 +62,25 @@ export const signup = async (req, res) => {
 	}
 };
 
-export const login = async (req,res)=>{
+export const login = async (req, res) => {
 	try {
-		const {email,password} = req.body;
-		const user = await User.findOne({email});
+		const { email, password } = req.body;
+		const user = await User.findOne({ email });
 
-		if(user && (await user.comparePassword(password))){
-			const {accessToken,refreshToken} = generateTokens(user._id);
-			await storeRefreshToken(user._id,refreshToken);
-			setCookies(res,accessToken,refreshToken);
+		if (user && (await user.comparePassword(password))) {
+			const { accessToken, refreshToken } = generateTokens(user._id);
+			await storeRefreshToken(user._id, refreshToken);
+			setCookies(res, accessToken, refreshToken);
 
-			res.status(201).json({
+			res.json({
 				_id: user._id,
 				name: user.name,
 				email: user.email,
 				role: user.role,
-			})
-		}else{
-			res.status(401).json({message:"Invalid email or password"});
+			});
+		} else {
+			res.status(400).json({ message: "Invalid email or password" });
 		}
-
 	} catch (error) {
 		console.log("Error in login controller", error.message);
 		res.status(500).json({ message: error.message });
@@ -105,6 +104,7 @@ export const logout = async (req, res) => {
 	}
 };
 
+// this will refresh the access token
 export const refreshToken = async (req, res) => {
 	try {
 		const refreshToken = req.cookies.refreshToken;
